@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <style>
+      * { box-sizing: border-box; }
+      body {
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        padding: 20px;
+        margin: 0;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+      .container {
+        background: white;
+        border-radius: 12px;
+        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        padding: 30px;
+        max-width: 500px;
+        width: 100%;
+      }
+      h2 {
+        margin: 0 0 10px 0;
+        color: #333;
+        text-align: center;
+        font-size: 24px;
+      }
+      .subtitle {
+        text-align: center;
+        color: #666;
+        margin-bottom: 30px;
+        font-size: 14px;
+      }
+      .stage {
+        background: #f8f9fa;
+        padding: 15px;
+        border-radius: 8px;
+        margin-bottom: 20px;
+        border-left: 4px solid #667eea;
+      }
+      .stage-title {
+        font-weight: bold;
+        color: #333;
+        margin-bottom: 8px;
+      }
+      .progress-item {
+        display: flex;
+        justify-content: space-between;
+        margin: 10px 0;
+        font-size: 14px;
+        color: #555;
+      }
+      .progress-item-label {
+        font-weight: 500;
+      }
+      .progress-item-value {
+        color: #667eea;
+        font-weight: bold;
+      }
+      .progress-bar {
+        width: 100%;
+        height: 8px;
+        background: #e0e0e0;
+        border-radius: 4px;
+        overflow: hidden;
+        margin: 15px 0;
+      }
+      .progress-fill {
+        height: 100%;
+        background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+        width: 0%;
+        transition: width 0.3s ease;
+      }
+      .time-elapsed {
+        font-size: 12px;
+        color: #999;
+        text-align: center;
+        margin-top: 15px;
+      }
+      .status-message {
+        font-size: 13px;
+        color: #666;
+        padding: 12px;
+        background: #f0f7ff;
+        border-radius: 6px;
+        margin-top: 15px;
+        text-align: center;
+      }
+      .error-message {
+        font-size: 13px;
+        color: #d32f2f;
+        padding: 12px;
+        background: #ffebee;
+        border-radius: 6px;
+        margin-top: 15px;
+        text-align: center;
+      }
+      .spinner {
+        display: inline-block;
+        width: 12px;
+        height: 12px;
+        border: 2px solid #f3f3f3;
+        border-top: 2px solid #667eea;
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+        margin-right: 8px;
+        vertical-align: middle;
+      }
+      @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+      }
+      .complete {
+        text-align: center;
+        padding: 30px 0;
+      }
+      .complete-icon {
+        font-size: 60px;
+        margin-bottom: 15px;
+      }
+      .complete-text {
+        font-size: 18px;
+        font-weight: bold;
+        color: #4caf50;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h2 id="title">📧 Importing...</h2>
+      <div class="subtitle" id="subtitle">Please wait while we import your emails</div>
+      
+      <div class="stage">
+        <div class="stage-title"><span class="spinner" id="spinner"></span><span id="currentStage">Initializing</span></div>
+        <div class="progress-bar">
+          <div class="progress-fill" id="progressFill"></div>
+        </div>
+        <div class="progress-item">
+          <span class="progress-item-label">Threads Found:</span>
+          <span class="progress-item-value" id="threadsFound">0</span>
+        </div>
+        <div class="progress-item">
+          <span class="progress-item-label">Threads Processed:</span>
+          <span class="progress-item-value" id="threadsProcessed">0</span>
+        </div>
+        <div class="progress-item">
+          <span class="progress-item-label">Emails Collected:</span>
+          <span class="progress-item-value" id="emailsCollected">0</span>
+        </div>
+        <div class="progress-item">
+          <span class="progress-item-label">Emails Written:</span>
+          <span class="progress-item-value" id="emailsWritten">0</span>
+        </div>
+      </div>
+      
+      <div id="statusContainer"></div>
+      <div class="time-elapsed" id="timeElapsed"></div>
+    </div>
+    
+    <script>
+      function formatTime(ms) {
+        const seconds = Math.floor(ms / 1000);
+        const minutes = Math.floor(seconds / 60);
+        return minutes > 0 
+          ? minutes + 'm ' + (seconds % 60) + 's'
+          : seconds + 's';
+      }
+      
+      function updateDisplay() {
+        google.script.run
+          .withSuccessHandler(function(progress) {
+            if (!progress) return;
+            
+            document.getElementById('currentStage').textContent = progress.stage;
+            document.getElementById('threadsFound').textContent = progress.threadsFound;
+            document.getElementById('threadsProcessed').textContent = progress.threadsProcessed;
+            document.getElementById('emailsCollected').textContent = progress.emailsCollected;
+            document.getElementById('emailsWritten').textContent = progress.emailsWritten;
+            
+            let percentage = 0;
+            if (progress.threadsFound > 0) {
+              percentage = Math.floor((progress.threadsProcessed / progress.threadsFound) * 100);
+            }
+            document.getElementById('progressFill').style.width = percentage + '%';
+            
+            const elapsed = new Date().getTime() - progress.startTime;
+            document.getElementById('timeElapsed').textContent = 'Elapsed: ' + formatTime(elapsed);
+            
+            const statusContainer = document.getElementById('statusContainer');
+            if (progress.error) {
+              statusContainer.innerHTML = '<div class="error-message">❌ Error: ' + progress.error + '</div>';
+              document.getElementById('spinner').style.display = 'none';
+            } else if (progress.complete) {
+              document.getElementById('title').textContent = '✅ Complete!';
+              document.getElementById('subtitle').textContent = 'Import finished successfully';
+              document.getElementById('spinner').style.display = 'none';
+              statusContainer.innerHTML = '<div class="complete"><div class="complete-icon">🎉</div><div class="complete-text">All emails imported</div></div>';
+            } else {
+              statusContainer.innerHTML = '<div class="status-message">' + progress.status + '</div>';
+            }
+          })
+          .getProgress();
+      }
+      
+      setInterval(updateDisplay, 500);
+      updateDisplay();
+    </script>
+  </body>
+</html>
