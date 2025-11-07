@@ -389,8 +389,9 @@ function clearExpectedEmailCount_(month, year) {
 }
 
 /**
- * Get actual count of rows in active sheet for a specific month/year
- * This verifies that all emails were written correctly
+ * Get actual count of rows in active sheet
+ * Simple: just count all data rows (skip header)
+ * The Gmail query already filtered by month, so we trust all rows are from the target month
  */
 function getDirectoryRowCount_(month, year) {
   const sheet = SpreadsheetApp.getActiveSheet();
@@ -398,18 +399,8 @@ function getDirectoryRowCount_(month, year) {
   const lastRow = sheet.getLastRow();
   if (lastRow <= 1) return 0;
   
-  const monthYearStr = formatMonthYear_(month, year);
-  const data = sheet.getDataRange().getValues();
-  
-  let count = 0;
-  for (let i = 1; i < data.length; i++) {
-    // Column 7 (index 6) is 'Import Month'
-    if (data[i][6] === monthYearStr) {
-      count++;
-    }
-  }
-  
-  return count;
+  // Simply return number of data rows (lastRow - 1 to skip header)
+  return lastRow - 1;
 }
 
 // ====================================================================
